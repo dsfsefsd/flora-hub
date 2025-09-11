@@ -1,0 +1,37 @@
+import telebot
+import requests
+import urllib.parse
+
+# Token bot
+TOKEN = "8458566047:AAFYXAIaN0c5QeOQhCP97QwYZj0CBb75OyI"
+bot = telebot.TeleBot(TOKEN)
+
+API_URL = "https://api.zeidteam.xyz/ai/chatgpt4?prompt="
+
+# ❗ Xóa webhook trước khi chạy polling để tránh lỗi 409
+bot.remove_webhook()
+
+@bot.message_handler(commands=['ask'])
+def ask_ai(message):
+    try:
+        query = message.text.replace("/ask", "").strip()
+        print(query)
+        if not query:
+            bot.reply_to(message, "⚠️ Vui lòng nhập câu hỏi sau lệnh /ask.")
+            return
+
+        prompt_encoded = urllib.parse.quote(query)
+        response = requests.get(API_URL + prompt_encoded, timeout=10).json()
+
+        if response.get("status"):
+            answer = response.get("response", "Không có câu trả lời.")
+        else:
+            answer = "❌ API không trả lời được."
+
+        bot.reply_to(message, answer)
+
+    except Exception as e:
+        bot.reply_to(message, f"⚠️ Lỗi: {e}")
+
+print("🚀 Bot đang chạy...")
+bot.infinity_polling(none_stop=True, timeout=60)
