@@ -1,0 +1,270 @@
+return True
+            
+        except ImportError:
+            # Fallback: manual captcha input
+            print(f"{Fore.RED}[-] Chưa cài OCR, chuyển sang manual input{Style.RESET_ALL}")
+            captcha_text = input(f"{Fore.YELLOW}Nhập captcha thủ công: {Style.RESET_ALL}")
+            
+            captcha_input = driver.find_element(By.NAME, "captcha")
+            captcha_input.clear()
+            captcha_input.send_keys(captcha_text)
+            
+            submit_btn = driver.find_element(By.XPATH, "//button[@type='submit']")
+            submit_btn.click()
+            
+            return True
+            
+    except Exception as e:
+        print(f"{Fore.RED}[-] Lỗi giải captcha: {e}{Style.RESET_ALL}")
+        return False
+
+# Auto watch QC
+def auto_watch_ads(driver):
+    print(f"{Fore.YELLOW}[+] Đang tìm quảng cáo...{Style.RESET_ALL}")
+    
+    try:
+        # Tìm nút xem QC
+        watch_ads_btn = WebDriverWait(driver, 10).until(
+            EC.element_to_be_clickable((By.XPATH, "//button[contains(text(), 'Watch Ads')]"))
+        )
+        watch_ads_btn.click()
+        
+        # Chờ QC load
+        time.sleep(5)
+        
+        # Chờ QC kết thúc
+        print(f"{Fore.YELLOW}[+] Đang xem quảng cáo...{Style.RESET_ALL}")
+        with tqdm(total=60, desc=f"{Fore.GREEN}Watching Ads{Style.RESET_ALL}") as pbar:
+            for i in range(60):
+                time.sleep(1)
+                pbar.update(1)
+        
+        # Tìm nút close hoặc tiếp tục
+        try:
+            close_btn = driver.find_element(By.XPATH, "//button[contains(text(), 'Close')]")
+            close_btn.click()
+        except:
+            pass
+            
+        print(f"{Fore.GREEN}[+] Đã xem xong quảng cáo!{Style.RESET_ALL}")
+        return True
+        
+    except Exception as e:
+        print(f"{Fore.RED}[-] Không tìm thấy quảng cáo: {e}{Style.RESET_ALL}")
+        return False
+
+# Auto get cookies và session
+def get_zefoy_session():
+    print(f"{Fore.YELLOW}[+] Đang khởi động browser...{Style.RESET_ALL}")
+    
+    options = webdriver.ChromeOptions()
+    options.add_argument('--disable-blink-features=AutomationControlled')
+    options.add_experimental_option("excludeSwitches", ["enable-automation"])
+    options.add_experimental_option('useAutomationExtension', False)
+    
+    # Dùng webdriver_manager để auto download driver
+    service = Service(ChromeDriverManager().install())
+    driver = webdriver.Chrome(service=service, options=options)
+    driver.execute_script("Object.defineProperty(navigator, 'webdriver', {get: () => undefined})")
+    
+    try:
+        # Truy cập Zefoy
+        driver.get(ZEFOY_URL)
+        
+        # Chờ trang load
+        WebDriverWait(driver, 30).until(
+            EC.presence_of_element_located((By.TAG_NAME, "body"))
+        )
+        
+        # Giải captcha nếu có
+        if "captcha" in driver.page_source:
+            solve_captcha(driver)import requests
+import random
+import time
+import json
+import re
+import base64
+from tqdm import tqdm
+from colorama import Fore, Style, init
+from selenium import webdriver
+from selenium.webdriver.common.by import By
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
+from selenium.common.exceptions import TimeoutException, NoSuchElementException
+from webdriver_manager.chrome import ChromeDriverManager
+from selenium.webdriver.chrome.service import Service
+
+# Initialize colorama
+init(autoreset=True)
+
+# Zefoy config
+ZEFOY_URL = "https://zefoy.com"
+HEADERS = {
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+    "Accept": "text/html,application/xhtml+xml,application/xml",
+    "Accept-Language": "en-US,en;q=0.5",
+    "Accept-Encoding": "gzip, deflate",
+    "Connection": "keep-alive",
+    "Upgrade-Insecure-Requests": "1"
+}
+
+# Banner
+def show_banner():
+    banner = f"""
+{Fore.CYAN}
+╔══════════════════════════════════════════════════════════════╗
+║{Fore.RED}                  ZEFOY AUTO BOT PRO                      {Fore.CYAN}║
+║{Fore.YELLOW}         Auto QC • Auto Captcha • All Services          {Fore.CYAN}║
+║{Fore.GREEN}                 https://zefoy.com                       {Fore.CYAN}║
+╚══════════════════════════════════════════════════════════════╝
+{Style.RESET_ALL}
+"""
+    print(banner)
+
+# Auto solve captcha
+def solve_captcha(driver):
+    print(f"{Fore.YELLOW}[+] Đang giải captcha...{Style.RESET_ALL}")
+    
+    try:
+        # Tìm captcha element
+        captcha_img = driver.find_element(By.XPATH, "//img[@src='/captcha']")
+        captcha_img.screenshot("captcha.png")
+        
+        # Dùng OCR để giải captcha (cần cài thư viện)
+        try:
+            import pytesseract
+            from PIL import Image, ImageEnhance, ImageFilter
+            
+            # Xử lý ảnh captcha
+            img = Image.open("captcha.png")
+            img = img.convert('L')  # Chuyển đen trắng
+            img = img.filter(ImageFilter.MedianFilter())
+            enhancer = ImageEnhance.Contrast(img)
+            img = enhancer.enhance(2)
+            
+            # Nhận diện text
+            captcha_text = pytesseract.image_to_string(img).strip()
+            print(f"{Fore.GREEN}[+] Captcha text: {captcha_text}{Style.RESET_ALL}")
+            
+            # Nhập captcha
+            captcha_input = driver.find_element(By.NAME, "captcha")
+            captcha_input.clear()
+            captcha_input.send_keys(captcha_text)
+            
+            # Submit
+            submit_btn = driver.find_element(By.XPATH, "//button[@type='submit']")
+            submit_btn.click()# Auto xem QC nếu cần
+        if "Watch Ads" in driver.page_source:
+            auto_watch_ads(driver)
+        
+        # Lấy cookies và session
+        cookies = driver.get_cookies()
+        session_cookies = {}
+        for cookie in cookies:
+            session_cookies[cookie['name']] = cookie['value']
+        
+        # Lấy token CSRF
+        page_source = driver.page_source
+        csrf_token = re.search(r'name="_token" value="([^"]+)"', page_source)
+        if csrf_token:
+            session_cookies['_token'] = csrf_token.group(1)
+        
+        print(f"{Fore.GREEN}[+] Lấy session thành công!{Style.RESET_ALL}")
+        return driver, session_cookies
+        
+    except Exception as e:
+        print(f"{Fore.RED}[-] Lỗi: {e}{Style.RESET_ALL}")
+        driver.quit()
+        return None, None
+
+# Auto buff services
+def auto_buff_services(driver, session_cookies, tiktok_url, service_type):
+    services = {
+        "views": "//button[contains(text(), 'Views')]",
+        "likes": "//button[contains(text(), 'Likes')]",
+        "followers": "//button[contains(text(), 'Followers')]",
+        "shares": "//button[contains(text(), 'Shares')]",
+        "favorites": "//button[contains(text(), 'Favorites')]",
+        "comments": "//button[contains(text(), 'Comments')]"
+    }
+    
+    try:
+        # Chọn service
+        service_btn = WebDriverWait(driver, 10).until(
+            EC.element_to_be_clickable((By.XPATH, services[service_type]))
+        )
+        service_btn.click()
+        
+        # Nhập TikTok URL
+        url_input = WebDriverWait(driver, 10).until(
+            EC.presence_of_element_located((By.NAME, "tiktok_url"))
+        )
+        url_input.clear()
+        url_input.send_keys(tiktok_url)
+        
+        # Search
+        search_btn = driver.find_element(By.XPATH, "//button[contains(text(), 'Search')]")
+        search_btn.click()
+        
+        # Chờ kết quả
+        time.sleep(3)
+        
+        # Start buff
+        start_btn = WebDriverWait(driver, 10).until(
+            EC.element_to_be_clickable((By.XPATH, "//button[contains(text(), 'Start')]"))
+        )
+        start_btn.click()
+        
+        print(f"{Fore.GREEN}[+] Đã bắt đầu buff {service_type}!{Style.RESET_ALL}")
+        return True
+        
+    except Exception as e:
+        print(f"{Fore.RED}[-] Lỗi buff {service_type}: {e}{Style.RESET_ALL}")
+        return False
+
+def main():
+    show_banner()
+    
+    # Auto get session
+    driver, session_cookies = get_zefoy_session()
+    if not driver or not session_cookies:
+        return
+    
+    try:
+        # Chọn service
+        print(f"\n{Fore.CYAN}Chọn dịch vụ:{Style.RESET_ALL}")
+        print(f"1. Views")
+        print(f"2. Likes")
+        print(f"3. Followers")
+        print(f"4. Shares")
+        print(f"5. Favorites")
+        print(f"6. Comments")
+        
+        choice = input(f"{Fore.YELLOW}Nhập lựa chọn (1-6): {Style.RESET_ALL}")
+        service_map = {"1": "views",
+            "2": "likes",
+            "3": "followers",
+            "4": "shares",
+            "5": "favorites",
+            "6": "comments"
+        }
+        
+        if choice not in service_map:
+            print(f"{Fore.RED}[-] Lựa chọn không hợp lệ!{Style.RESET_ALL}")
+            return
+        
+        service_type = service_map[choice]
+        tiktok_url = input(f"{Fore.YELLOW}Nhập URL TikTok: {Style.RESET_ALL}")
+        
+        # Auto buff
+        auto_buff_services(driver, session_cookies, tiktok_url, service_type)
+        
+        # Giữ browser mở
+        print(f"{Fore.YELLOW}[+] Browser vẫn mở, đóng thủ công khi xong{Style.RESET_ALL}")
+        input("Nhấn Enter để thoát...")
+        
+    finally:
+        driver.quit()
+
+if __name__ == "__main__":
+    main()
